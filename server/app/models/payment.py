@@ -1,6 +1,5 @@
 from app.config import db
 from datetime import datetime
-from app.models.order import Order
 
 class Payment(db.Model):
     __tablename__ = 'payments'

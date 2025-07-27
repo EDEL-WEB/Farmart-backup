@@ -4,7 +4,7 @@ from datetime import datetime
 class Order(db.Model):
     __tablename__ = "orders"
 
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)

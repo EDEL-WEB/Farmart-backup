@@ -1,86 +1,41 @@
-from flask import request, jsonify
-from flask_jwt_extended import (
-    create_access_token,
-    get_jwt_identity,
-    jwt_required
-)
-from app.models.user import User
-from app.config import db, jwt
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask import jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.models import db, User
+from flask_jwt_extended import create_access_token
+from datetime import timedelta
 
-
-# === REGISTER ===
-def register_user():
-    data = request.get_json()
+def register_user(data):
     username = data.get("username")
     email = data.get("email")
     password = data.get("password")
-    is_admin = data.get("is_admin", False)
+    role = data.get("role")  # "user" or "farmer"
 
-    if not all([username, email, password]):
-        return jsonify({"error": "Missing required fields"}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already exists"}), 400
 
-    if User.query.filter((User.username == username) | (User.email == email)).first():
-        return jsonify({"error": "Username or email already taken"}), 409
-
-    # Create user
-    user = User(username=username, email=email, is_admin=is_admin)
-    user.password = password
-
-    db.session.add(user)
+    hashed_pw = generate_password_hash(password)
+    new_user = User(username=username, email=email, password=hashed_pw, role=role)
+    db.session.add(new_user)
     db.session.commit()
 
     return jsonify({"message": "User registered successfully"}), 201
 
-
-# === LOGIN ===
-def login_user():
-    data = request.get_json()
-    print("Received login data:", data)
-    
-    username = data.get("username")
+def login_user(data):
     email = data.get("email")
     password = data.get("password")
 
-    identifier = username or email
+    user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"error": "Invalid credentials"}), 401
 
-    if not identifier or not password:
-        return jsonify({"error": "Missing credentials"}), 400
+    access_token = create_access_token(
+        identity=user.id,
+        additional_claims={"role": user.role},
+        expires_delta=timedelta(hours=2)
+    )
 
-    user = User.query.filter(
-        (User.username == identifier) | (User.email == identifier)
-    ).first()
-
-    # Validate password
-    if user and user.authenticate(password):
-        access_token = create_access_token(identity=str(user.id))
-
-        return jsonify({
-            "message": "Login successful",
-            "access_token": access_token,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "is_admin": user.is_admin
-            }
-        }), 200
-
-    return jsonify({"error": "Invalid credentials"}), 401
-
-
-# === GET PROFILE ===
-@jwt_required()
-def get_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get(int(user_id))
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    return jsonify({
+    return jsonify({"token": access_token, "user": {
         "id": user.id,
         "username": user.username,
-        "email": user.email,
-        "is_admin": user.is_admin
-    }), 200
+        "role": user.role
+    }})

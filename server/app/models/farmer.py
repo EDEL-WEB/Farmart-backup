@@ -4,16 +4,18 @@ class Farmer(db.Model):
     __tablename__ = 'farmers'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
+    name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     phone = db.Column(db.String(15), nullable=False, unique=True)
 
-    animals = db.relationship('Animal', back_populates='farmer', lazy=True)
+    # One farmer can own many animals
+    animals = db.relationship('Animal', back_populates='farmer', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "email": self.email,
-            "phone": self.phone
+            "phone": self.phone,
+            "animals": [animal.to_dict() for animal in self.animals]
         }

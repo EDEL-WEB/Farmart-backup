@@ -1,7 +1,9 @@
+# app/routes/admin_routes.py
+
 from flask import Blueprint
+from flask_jwt_extended import jwt_required
 from app.controllers.admin_controller import get_all_users, toggle_admin, get_user_by_id
 from app.utils.decorators import admin_required
-from flask_jwt_extended import jwt_required
 
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/api/admin")
 

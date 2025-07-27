@@ -4,17 +4,19 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+sendgrid = "*"
 flask = "*"
 flask-sqlalchemy = "*"
-flask-cors = "*"
-cloudinary = "*"
-pillow = "*"
-flask-bcrypt = "*"
+flask-migrate = "*"
 flask-restful = "*"
 flask-jwt-extended = "*"
-sendgrid = "*"
+flask-bcrypt = "*"
+cloudinary = "*"
+pillow = "*"
+python-dotenv = "*"
+flask-cors = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.12"
