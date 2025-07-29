@@ -1,71 +1,62 @@
 import React, { useEffect, useState } from "react";
-import { Spinner } from "react-bootstrap";
+import { Spinner, Table } from "react-bootstrap";
+import api from "../api/axios"; // ✅ use axios instance
 
-export default function OrderList() {
+function OrderList() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/orders/")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched orders:", data); // DEBUG: check structure
-        // ✅ Extract the array from 'data.orders' or fallback to []
-        setOrders(data.orders || []);
+    api.get("/orders/")
+      .then((res) => {
+        console.log("✅ Fetched orders:", res.data);
+        setOrders(res.data.orders || []);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to fetch orders", err);
+        console.error("❌ Failed to fetch orders:", err);
         setLoading(false);
       });
   }, []);
 
   if (loading) {
     return (
-      <div className="text-center my-5">
-        <Spinner animation="border" variant="primary" />
+      <div className="text-center mt-5">
+        <Spinner animation="border" />
         <p>Loading orders...</p>
       </div>
     );
   }
 
-  if (orders.length === 0) {
-    return <p className="text-center text-muted">No orders found.</p>;
+  if (!orders.length) {
+    return <p className="text-center text-muted mt-5">No orders available.</p>;
   }
 
   return (
-    <div className="container my-4">
-      <h2 className="mb-4 text-center">All Orders</h2>
-      <div className="table-responsive">
-        <table className="table table-hover table-bordered align-middle">
-          <thead className="table-dark">
-            <tr>
-              <th scope="col">Order ID</th>
-              <th scope="col">Buyer Username</th>
-              <th scope="col">Animals Ordered</th>
-              <th scope="col">Total Amount</th>
+    <div className="container mt-4">
+      <h2 className="mb-4">Orders List</h2>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Animal</th>
+            <th>Buyer</th>
+            <th>Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr key={order.id}>
+              <td>{order.id}</td>
+              <td>{order.animal?.name || "N/A"}</td>
+              <td>{order.user?.name || "N/A"}</td>
+              <td>{order.paid ? "Yes" : "No"}</td>
             </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td>{order.id}</td>
-                <td>{order.user?.username || "N/A"}</td>
-                <td>
-                  <ul className="mb-0">
-                    {order.animals.map((animal) => (
-                      <li key={animal.id}>
-                        <strong>{animal.name}</strong> - {animal.breed} (${animal.price})
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-                <td><strong>${order.total_amount}</strong></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </Table>
     </div>
   );
 }
+
+export default OrderList;

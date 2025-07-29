@@ -1,14 +1,15 @@
 from app.extensions import db
 from app.models import User, Farmer, Animal
 from app import create_app
+from sqlalchemy import text  # ✅ ADD THIS
 
 def seed_data():
     print("🌱 Seeding data...")
 
-    # Clear existing data
-    Animal.query.delete()
-    Farmer.query.delete()
-    User.query.delete()
+    # ⛔ Wipe existing data safely
+    db.session.execute(
+        text("TRUNCATE orders, animals, farmers, users RESTART IDENTITY CASCADE")
+    )
     db.session.commit()
 
     # Create a farmer user

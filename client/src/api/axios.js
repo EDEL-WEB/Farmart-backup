@@ -1,14 +1,21 @@
-// src/api/axios.js
+// api/axios.js
+import axios from 'axios';
 
-import axios from "axios";
-
-// Create an Axios instance
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // or your production backend URL
-  withCredentials: true,                // 🔐 Send cookies with every request
+  baseURL: 'http://localhost:5000/api', // Your Flask server with /api prefix
+  withCredentials: true,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
+});
+
+// Don't set Content-Type for FormData requests - let axios handle it
+api.interceptors.request.use((config) => {
+  // Remove Content-Type header for FormData to let browser set it with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  return config;
 });
 
 export default api;

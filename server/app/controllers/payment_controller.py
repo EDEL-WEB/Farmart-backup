@@ -1,36 +1,39 @@
 from flask import request, jsonify
-from app.models import Payment  # Ensure this model is defined correctly
-from app.extensions import db     # Ensure `db` is the SQLAlchemy instance from config
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.models import Order, Payment, User
+from app.extensions import db
 from datetime import datetime
 
-# Create a new payment
-def make_payment():
-    data = request.get_json()
+@jwt_required()
+def checkout():
+    user_id = get_jwt_identity()
+    
+    # Step 1: Get the pending order
+    order = Order.query.filter_by(user_id=user_id, status="pending").first()
+    if not order:
+        return jsonify({"error": "No pending order found"}), 404
+
+    # Step 2: Calculate total amount
+    total = sum(item.animal.price for item in order.items)  # Ensure `order.items` relationship exists
+
+    # Step 3: Create the payment
+    payment = Payment(
+        order_id=order.id,
+        user_id=user_id,
+        farmer_id=order.items[0].animal.farmer_id if order.items else None,  # Optional
+        amount=total,
+        method=request.json.get("method", "Mpesa"),
+        status="paid",  # Simulate successful payment
+        created_at=datetime.utcnow()
+    )
+    db.session.add(payment)
+
+    # Step 4: Mark order as completed
+    order.status = "completed"
+    
     try:
-        new_payment = Payment(
-            user_id=data["user_id"],
-            amount=data["amount"],
-            method=data["method"],
-            status="pending",
-            timestamp=datetime.utcnow()
-        )
-        db.session.add(new_payment)
         db.session.commit()
-        return jsonify({"message": "Payment created", "payment": new_payment.to_dict()}), 201
+        return jsonify({"message": "Checkout successful", "payment": payment.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
-
-
-# Get all payments
-def get_all_payments():
-    payments = Payment.query.all()
-    return jsonify([payment.to_dict() for payment in payments]), 200
-
-
-# Get payment by ID
-def get_payment_by_id(payment_id):
-    payment = Payment.query.get(payment_id)
-    if not payment:
-        return jsonify({"error": "Payment not found"}), 404
-    return jsonify(payment.to_dict()), 200
+        return jsonify({"error": str(e)}), 500

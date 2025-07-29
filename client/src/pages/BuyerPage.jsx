@@ -1,152 +1,235 @@
-// src/pages/BuyerPage.jsx
-import React, { useEffect, useState, useContext } from "react";
-import axios from "axios";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Spinner,
-  ListGroup,
-  Form,
-} from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { CartContext } from "../context/CartContext";
-import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
+import { Container, Form, Button, Alert, Card } from "react-bootstrap";
 
-function BuyerPage() {
+const FarmerPage = () => {
+  const { user, token } = useAuth();
   const [animals, setAnimals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { cart, setCart } = useContext(CartContext);
-  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: "",
+    breed: "",
+    age: "",
+    price: "",
+    description: "",
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
+  // Fetch user animals
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/animals")
-      .then((res) => {
-        setAnimals(res.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch animals:", err);
-        setLoading(false);
-      });
-  }, []);
+    if (token) {
+      api
+        .get("/animals", {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        })
+        .then((res) => {
+          const userAnimals = res.data.filter((a) => a.farmer_id === user?.id);
+          setAnimals(userAnimals);
+        })
+        .catch(() => setError("Failed to fetch your animals."));
+    }
+  }, [token, user?.id]);
 
-  const addToCart = (animal) => {
-    if (!cart.some((item) => item.id === animal.id)) {
-      setCart([...cart, animal]);
+  // Handle form input
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === "image") {
+      setImageFile(files[0]);
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  // Submit animal data with image in single request
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Validate required fields
+    if (!formData.name || !formData.breed || !formData.age || !formData.price || !imageFile) {
+      setError("Please fill in all required fields and select an image.");
+      return;
+    }
+
+    try {
+      // Create FormData with all fields including image
+      const submitData = new FormData();
+      submitData.append("name", formData.name);
+      submitData.append("breed", formData.breed);
+      submitData.append("age", formData.age);
+      submitData.append("price", formData.price);
+      submitData.append("description", formData.description);
+      submitData.append("image", imageFile);
+
+      // Single request to create animal
+      const res = await api.post("/animals/", submitData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+      });
+
+      setAnimals([...animals, res.data]);
+      setSuccess("Animal uploaded successfully!");
+      
+      // Reset form
+      setFormData({
+        name: "",
+        breed: "",
+        age: "",
+        price: "",
+        description: "",
+      });
+      setImageFile(null);
+      
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
+
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.error || "Upload failed. Check form and try again."
+      );
     }
   };
 
   return (
-    <Container className="mt-4">
-      <h2 className="text-center mb-4">🐮 Welcome Buyer</h2>
+    <Container className="mt-5">
+      <h2>Welcome {user?.email || "Farmer"}</h2>
+      <h4 className="mt-3">Upload a New Animal</h4>
 
-      {loading ? (
-        <div className="text-center mt-5">
-          <Spinner animation="border" />
-        </div>
-      ) : animals.length === 0 ? (
-        <p className="text-center text-muted">No animals available at the moment.</p>
-      ) : (
-        <>
-          <h4 className="mb-3">Browse Available Animals</h4>
-          <Row>
-            {animals.map((animal) => (
-              <Col key={animal.id} md={4} className="mb-4">
-                <Card>
-                  {animal.image_url && (
-                    <Card.Img
-                      variant="top"
-                      src={animal.image_url}
-                      alt={animal.name}
-                      style={{ height: "200px", objectFit: "cover" }}
-                    />
-                  )}
-                  <Card.Body>
-                    <Card.Title>{animal.name}</Card.Title>
-                    <Card.Subtitle className="mb-2 text-muted">
-                      {animal.breed}
-                    </Card.Subtitle>
-                    <Card.Text>
-                      Age: {animal.age} years <br />
-                      Price: KES {animal.price}
-                    </Card.Text>
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => addToCart(animal)}
-                    >
-                      Add to Cart
-                    </Button>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </>
-      )}
+      {error && <Alert variant="danger">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
 
-      <hr className="my-4" />
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3">
+          <Form.Label>Name</Form.Label>
+          <Form.Control 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            required 
+            placeholder="Enter animal name"
+          />
+        </Form.Group>
 
-      <h4 className="mb-3">🛒 My Cart</h4>
-      {cart.length === 0 ? (
-        <p className="text-muted">No items in cart yet.</p>
-      ) : (
-        <ListGroup>
-          {cart.map((item) => (
-            <ListGroup.Item key={item.id}>
-              {item.name} - KES {item.price}
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-      )}
+        <Form.Group className="mb-3">
+          <Form.Label>Breed</Form.Label>
+          <Form.Control 
+            name="breed" 
+            value={formData.breed} 
+            onChange={handleChange} 
+            required 
+            placeholder="Enter breed"
+          />
+        </Form.Group>
 
-      <hr className="my-5" />
+        <Form.Group className="mb-3">
+          <Form.Label>Age</Form.Label>
+          <Form.Control 
+            type="number" 
+            name="age" 
+            value={formData.age} 
+            onChange={handleChange} 
+            required 
+            min="0"
+            placeholder="Enter age in years"
+          />
+        </Form.Group>
 
-      {/* ✅ Testimonials Section */}
-      <div className="mt-5">
-        <h4 className="text-center mb-4">What Our Buyers Say</h4>
-        <Row>
-          <Col md={6}>
-            <blockquote className="blockquote">
-              <p>"Amazing service! Got a healthy cow delivered same day!"</p>
-              <footer className="blockquote-footer">Achieng, Kisumu</footer>
-            </blockquote>
-          </Col>
-          <Col md={6}>
-            <blockquote className="blockquote">
-              <p>"Farmart makes animal buying easy and trustworthy."</p>
-              <footer className="blockquote-footer">Otieno, Homa Bay</footer>
-            </blockquote>
-          </Col>
-        </Row>
-      </div>
+        <Form.Group className="mb-3">
+          <Form.Label>Price (KES)</Form.Label>
+          <Form.Control 
+            type="number" 
+            name="price" 
+            value={formData.price} 
+            onChange={handleChange} 
+            required 
+            min="0"
+            step="0.01"
+            placeholder="Enter price in KES"
+          />
+        </Form.Group>
 
-      {/* 📬 Newsletter Signup */}
-      <div className="mt-5 p-4 bg-light rounded">
-        <h5 className="mb-3">📬 Stay Updated</h5>
-        <Form>
-          <Form.Group controlId="newsletterEmail">
-            <Form.Label>Email address</Form.Label>
-            <Form.Control type="email" placeholder="Enter your email" />
-          </Form.Group>
-          <Button variant="primary" className="mt-2">
-            Subscribe
-          </Button>
-        </Form>
-      </div>
+        <Form.Group className="mb-3">
+          <Form.Label>Description (optional)</Form.Label>
+          <Form.Control 
+            as="textarea" 
+            rows={3} 
+            name="description" 
+            value={formData.description} 
+            onChange={handleChange}
+            placeholder="Enter description (optional)"
+          />
+        </Form.Group>
 
-      {/* 👉 Go to Animal Listings */}
-      <div className="text-center mt-5">
-        <Button variant="outline-primary" onClick={() => navigate("/animals")}>
-          View All Listings
+        <Form.Group className="mb-3">
+          <Form.Label>Image</Form.Label>
+          <Form.Control 
+            type="file" 
+            name="image" 
+            accept="image/*" 
+            onChange={handleChange} 
+            required 
+          />
+          {imageFile && (
+            <Form.Text className="text-muted">
+              Selected: {imageFile.name}
+            </Form.Text>
+          )}
+        </Form.Group>
+
+        <Button variant="primary" type="submit">
+          Upload Animal
         </Button>
-      </div>
+      </Form>
+
+      <hr />
+      <h4 className="mt-4">Your Uploaded Animals</h4>
+      {animals.length === 0 ? (
+        <p className="text-muted">No animals uploaded yet.</p>
+      ) : (
+        <div className="d-flex flex-wrap gap-3">
+          {animals.map((animal) => (
+            <Card key={animal.id} style={{ width: "18rem" }}>
+              <Card.Img
+                variant="top"
+                src={
+                  animal.picture_url?.startsWith("/")
+                    ? `http://localhost:5000${animal.picture_url}`
+                    : animal.picture_url
+                }
+                onError={(e) => {
+                  e.target.src = "http://localhost:5000/fallback.jpg";
+                }}
+                style={{ height: "200px", objectFit: "cover" }}
+              />
+              <Card.Body>
+                <Card.Title>{animal.name}</Card.Title>
+                <Card.Text>
+                  <strong>Breed:</strong> {animal.breed}<br />
+                  <strong>Age:</strong> {animal.age} years<br />
+                  <strong>Price:</strong> KES {animal.price}
+                  {animal.description && (
+                    <>
+                      <br />
+                      <strong>Description:</strong> {animal.description}
+                    </>
+                  )}
+                </Card.Text>
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+      )}
     </Container>
   );
-}
+};
 
-export default BuyerPage;
+export default FarmerPage;

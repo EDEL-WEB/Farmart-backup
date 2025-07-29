@@ -9,10 +9,11 @@ class OrderControllerOne(CoreControllerOne):
     def __init__(self):
         super().__init__(Order)
 
-# Function-based controllers for the routes
+# Instantiate controllers
 order_controller = OrderController()
 order_controller_one = OrderControllerOne()
 
+# Function-based route handlers
 def create_order():
     return order_controller.post()
 

@@ -20,12 +20,13 @@ def create_app():
 
     # CORS configuration
     CORS(app,
-         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-         supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization", "Accept"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         expose_headers=["Content-Type", "Authorization", "Set-Cookie"]
-    )
+     supports_credentials=True,
+     origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+     allow_headers=["Content-Type", "Authorization", "Accept"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     expose_headers=["Content-Type", "Authorization", "Set-Cookie"]
+)
+
 
     # Add response headers after each request
     @app.after_request
@@ -49,6 +50,7 @@ def create_app():
     from app.routes.order_routes import order_bp
     from app.routes.payment_routes import payment_bp
     from app.routes.user_routes import user_bp
+    from app.routes.upload_routes import upload_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(animal_bp, url_prefix='/api/animals')
@@ -57,6 +59,7 @@ def create_app():
     app.register_blueprint(order_bp, url_prefix='/api/orders')
     app.register_blueprint(payment_bp, url_prefix='/api/payments')
     app.register_blueprint(user_bp, url_prefix='/api/users')
+    app.register_blueprint(upload_bp)
 
     # Static image file route
     @app.route('/images/<path:filename>')
