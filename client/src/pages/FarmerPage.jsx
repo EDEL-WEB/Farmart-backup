@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 
 const FarmerPage = () => {
@@ -8,20 +8,17 @@ const FarmerPage = () => {
     age: "",
     price: "",
     description: "",
+    type: "",
     image: null,
   });
 
-  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-
-    if (name === "image" && files[0]) {
+    if (name === "image") {
       setFormData({ ...formData, image: files[0] });
-      setPreview(URL.createObjectURL(files[0]));
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -29,8 +26,8 @@ const FarmerPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     setMessage("");
-    setError("");
 
     const data = new FormData();
     for (const key in formData) {
@@ -40,7 +37,20 @@ const FarmerPage = () => {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/animals/", data);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setMessage("Authentication token missing.");
+        return;
+      }
+
+      const response = await axios.post("http://localhost:5555/api/animals", data, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+      });
+
       setMessage("✅ Animal uploaded successfully!");
       setFormData({
         name: "",
@@ -48,42 +58,92 @@ const FarmerPage = () => {
         age: "",
         price: "",
         description: "",
+        type: "",
         image: null,
       });
-      setPreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = null;
-    } catch (err) {
-      console.error("Upload error:", err);
-      setError("❌ Failed to upload animal. Please check your input or server.");
+    } catch (error) {
+      if (error.response?.data?.error) {
+        setMessage(` Error: ${error.response.data.error}`);
+      } else {
+        setMessage(" Upload failed. Check server or connection.");
+      }
+      console.error("Upload error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="container mt-5">
-      <h2 className="mb-4">Upload New Animal</h2>
+      <h2>Upload Animal for Sale</h2>
 
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-danger">{error}</div>}
+      {message && <div className="alert alert-info">{message}</div>}
 
       <form onSubmit={handleSubmit} encType="multipart/form-data">
-        {[
-          { label: "Animal Name", name: "name", type: "text" },
-          { label: "Breed", name: "breed", type: "text" },
-          { label: "Age", name: "age", type: "number" },
-          { label: "Price (KES)", name: "price", type: "number" },
-        ].map(({ label, name, type }) => (
-          <div className="mb-3" key={name}>
-            <label className="form-label">{label}</label>
-            <input
-              type={type}
-              className="form-control"
-              name={name}
-              value={formData[name]}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        ))}
+        <div className="mb-3">
+          <label className="form-label">Animal Name</label>
+          <input
+            type="text"
+            className="form-control"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Breed</label>
+          <input
+            type="text"
+            className="form-control"
+            name="breed"
+            value={formData.breed}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Age</label>
+          <input
+            type="number"
+            className="form-control"
+            name="age"
+            value={formData.age}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Price</label>
+          <input
+            type="number"
+            className="form-control"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Animal Type</label>
+          <select
+            className="form-select"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            required
+          >
+            <option value="">-- Select Type --</option>
+            <option value="cow">Cow</option>
+            <option value="goat">Goat</option>
+            <option value="sheep">Sheep</option>
+            <option value="chicken">Chicken</option>
+          </select>
+        </div>
 
         <div className="mb-3">
           <label className="form-label">Description</label>
@@ -94,33 +154,28 @@ const FarmerPage = () => {
             onChange={handleChange}
             rows="3"
             required
-          ></textarea>
+          />
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Image</label>
+          <label className="form-label">Upload Image</label>
           <input
             type="file"
             className="form-control"
             name="image"
             accept="image/*"
             onChange={handleChange}
-            ref={fileInputRef}
             required
           />
         </div>
 
-        {preview && (
-          <div className="mb-3">
-            <img
-              src={preview}
-              alt="Preview"
-              style={{ maxWidth: "200px", borderRadius: "10px" }}
-            />
-          </div>
-        )}
-
-        <button type="submit" className="btn btn-primary">Submit Animal</button>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={loading}
+        >
+          {loading ? "Uploading..." : "Upload Animal"}
+        </button>
       </form>
     </div>
   );

@@ -15,6 +15,9 @@ api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
+  // config.withCredentials = true; // Ensure cookies are sent with requests
+
+  // config.headers['Authorization']=`Bearer ${localStorage.getItem("token")}`
   return config;
 });
 

@@ -1,6 +1,8 @@
 import React from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import '../components/HomePage.css';
+
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -31,9 +33,10 @@ const HomePage = () => {
 
   return (
     <Container className="mt-5">
+
       {/* 🌟 Hero Section */}
       <div className="text-center mb-5 p-5 bg-light rounded shadow">
-        <h1 className="display-4 fw-bold">Welcome to Farmart</h1>
+        <h1 className="display-4 fw-bold text-success">Welcome to Farmart</h1>
         <p className="lead">Connecting farmers and buyers for a smarter, healthier livestock trade.</p>
         <Button variant="success" size="lg" onClick={() => navigate("/animals")}>
           Browse Animals
@@ -41,22 +44,22 @@ const HomePage = () => {
       </div>
 
       {/* 🐄 Static Preview Section */}
-      <h3 className="mb-4">Popular Animals</h3>
+      <h3 className="mb-4 text-success fw-bold">Popular Animals</h3>
       <Row className="mb-5">
         {staticAnimals.map((animal) => (
           <Col key={animal.id} sm={12} md={6} lg={4} className="mb-4">
-            <Card>
+            <Card className="h-100 shadow-sm">
               <Card.Img
                 variant="top"
                 src={animal.picture_url}
                 alt={animal.name}
-                style={{ height: "200px", objectFit: "cover" }}
+                style={{ height: "220px", objectFit: "cover" }}
               />
               <Card.Body>
                 <Card.Title>{animal.name}</Card.Title>
                 <Card.Text>
-                  Breed: {animal.breed} <br />
-                  Price: KES {animal.price.toLocaleString()}
+                  <strong>Breed:</strong> {animal.breed} <br />
+                  <strong>Price:</strong> KES {animal.price.toLocaleString()}
                 </Card.Text>
                 <Button variant="outline-success" onClick={() => navigate("/animals")}>
                   View More
@@ -67,44 +70,46 @@ const HomePage = () => {
         ))}
       </Row>
 
-      {/* 💡 Features Section */}
-      <h3 className="mb-3 text-center">Why Choose Farmart?</h3>
-      <Row className="mb-5 text-center">
-        <Col md={3}>
-          <h5>✅ Trusted Farmers</h5>
-          <p>Only verified farmers allowed to list animals.</p>
-        </Col>
-        <Col md={3}>
-          <h5>🚚 Delivery Options</h5>
-          <p>Nationwide delivery available for most animals.</p>
-        </Col>
-        <Col md={3}>
-          <h5>💳 Secure Payments</h5>
-          <p>We use secure gateways to protect your payments.</p>
-        </Col>
-        <Col md={3}>
-          <h5>🩺 Vaccinated Animals</h5>
-          <p>All listings are required to have proof of vaccination.</p>
-        </Col>
-      </Row>
+      {/* 🌟 Features Section */}
+      <div className="p-4 rounded bg-white shadow-sm mb-5">
+        <h2 className="text-center mb-4 fw-bold text-success">Why Farmers & Buyers ❤️ Farmart</h2>
+        <Row className="text-center">
+          <Col md={4} className="mb-3">
+            <h5>🧑‍🌾 Verified Farmers</h5>
+            <p>We partner only with genuine, trusted farmers across the country.</p>
+          </Col>
+          <Col md={4} className="mb-3">
+            <h5>💼 Transparent Deals</h5>
+            <p>No middlemen. Just fair prices, real animals, and clear details.</p>
+          </Col>
+          <Col md={4} className="mb-3">
+            <h5>🔐 Safe & Simple Payments</h5>
+            <p>Your transactions are secured with industry-standard encryption.</p>
+          </Col>
+        </Row>
+      </div>
 
-      {/* 🧭 How It Works */}
-      <h3 className="mb-3 text-center">How It Works</h3>
-      <Row className="mb-5 text-center">
-        <Col md={3}><strong>1.</strong> Register an account</Col>
-        <Col md={3}><strong>2.</strong> Browse animals</Col>
-        <Col md={3}><strong>3.</strong> Add to cart</Col>
-        <Col md={3}><strong>4.</strong> Complete purchase</Col>
-      </Row>
+      {/* 🚀 How It Works Section */}
+      <div className="p-4 rounded bg-white shadow-sm mb-5">
+        <h2 className="text-center mb-4 fw-bold text-success">Get Started in 4 Easy Steps</h2>
+        <Row className="text-center">
+          <Col md={3}><span className="fw-bold">1️⃣ Register</span><br />Create your free Farmart account.</Col>
+          <Col md={3}><span className="fw-bold">2️⃣ Explore</span><br />Browse a variety of quality animals.</Col>
+          <Col md={3}><span className="fw-bold">3️⃣ Select</span><br />View animal details and add to cart.</Col>
+          <Col md={3}><span className="fw-bold">4️⃣ Buy</span><br />Checkout securely and connect with the farmer.</Col>
+        </Row>
+      </div>
 
-      {/* 🧑‍🌾 About */}
-      <h3 className="mb-3 text-center">About Farmart</h3>
-      <p className="text-center mb-5">
-        Farmart is a digital marketplace bridging the gap between farmers and buyers.
-        We aim to simplify livestock trading through a seamless, transparent platform.
-        Whether you’re a farmer looking to list your animals or a buyer seeking quality livestock,
-        Farmart makes the process quick and easy.
-      </p>
+      {/* 📢 About Section */}
+     <div className="p-4 rounded about-section shadow-sm">
+  <h2 className="text-center mb-4 fw-bold text-success">What is Farmart?</h2>
+  <p className="text-center fs-5">
+    Farmart is Kenya’s modern digital livestock market. We're revolutionizing how farmers sell
+    and how buyers discover livestock. With real-time listings, secure payments, and farmer profiles,
+    Farmart builds trust, saves time, and helps agriculture grow.
+  </p>
+</div>
+
     </Container>
   );
 };

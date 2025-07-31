@@ -1,7 +1,8 @@
+# app/controllers/checkout_controller.py
+
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-
 from app.models import Order, Payment, db
 
 @jwt_required()
@@ -21,7 +22,7 @@ def checkout():
     payment = Payment(
         user_id=user_id,
         amount=total_amount,
-        method="MockPay",
+        method="MockPay",  # Simulated method
         status="paid",
         timestamp=datetime.utcnow()
     )

@@ -7,7 +7,7 @@ class Animal(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     
-    # 🐮 Add all expected columns back
+    
     breed = db.Column(db.String, nullable=False)
     age = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -16,12 +16,12 @@ class Animal(db.Model, SerializerMixin):
     picture_url = db.Column(db.String)
     description = db.Column(db.Text)
 
-    # 🔐 Foreign Keys
+    
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     farmer_id = db.Column(db.Integer, db.ForeignKey("farmers.id"))
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
 
-    # 🔗 Relationships
+    
     user = db.relationship("User", back_populates="animals")
     farmer = db.relationship("Farmer", back_populates="animals")
     order = db.relationship("Order", back_populates="animals")

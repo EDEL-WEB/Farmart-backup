@@ -126,9 +126,11 @@ def login_user():
 
         response = jsonify({
             "message": "Login successful",
-            "user": user.to_dict()
+            "user": user.to_dict(),
+            "access_token": access_token
         })
         set_access_cookies(response, access_token)
+        # return response
         return _add_cors_headers(response)
 
     except Exception as e:

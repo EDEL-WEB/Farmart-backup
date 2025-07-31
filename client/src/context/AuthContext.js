@@ -1,74 +1,62 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
+import api from "../api/axios"; // custom axios instance
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);        // Contains user info: { name, role, ... }
-  const [token, setToken] = useState(null);      // JWT token
-
-  // Automatically attach token to all future fetch requests
-  const authFetch = async (url, options = {}) => {
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${token}`
-    };
-    return fetch(url, { ...options, headers });
-  };
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
 
   // Login function
   const login = async (email, password) => {
-    const res = await fetch("http://127.0.0.1:5000/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      credentials: "include",  // Required if backend sets a cookie
-      body: JSON.stringify({ email, password })
-    });
+    const res = await api.post("/auth/login", { email, password });
 
-    if (!res.ok) {
+    if (!res || !res.data) {
       throw new Error("Login failed");
     }
 
-    const data = await res.json();
-
-    // 👇 Update state with user + token
-    setUser(data.user);
-    setToken(data.access_token); // or data.token depending on your backend
+    setUser(res.data.user);
+    console.log("User logged in:", res.data);
+    setToken(res.data.access_token);
+    localStorage.setItem("token", res.data.access_token);
   };
 
-  // Logout function
   const logout = async () => {
-    await fetch("http://127.0.0.1:5000/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+    await api.post("/auth/logout");
     setUser(null);
     setToken(null);
   };
 
-  // Optionally auto-load current user (if using cookie-based session or persisted token)
+  // Attach auth headers to api instance
+  useEffect(() => {
+    if (token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete api.defaults.headers.common["Authorization"];
+    }
+  }, [token]);
+
+  // Auto login if session exists
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/api/auth/me", {
-          credentials: "include"
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-          setToken(data.access_token || null); // optional if backend includes token
+        const res = await api.get("/auth/me");
+        if (res.data) {
+          setUser(res.data.user);
+          if (res.data.access_token) {
+            setToken(res.data.access_token);
+          }
         }
       } catch (err) {
-        console.error("Session check failed", err);
+        console.error("No active session");
       }
     };
     checkSession();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, authFetch }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

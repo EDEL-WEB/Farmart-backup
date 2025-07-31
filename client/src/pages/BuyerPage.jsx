@@ -1,235 +1,225 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
+import axios from "axios";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  Spinner,
+  ListGroup,
+  Form,
+  Modal,
+} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import { CartContext } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import api from "../api/axios";
-import { Container, Form, Button, Alert, Card } from "react-bootstrap";
 
-const FarmerPage = () => {
-  const { user, token } = useAuth();
+const BuyerPage = () => {
   const [animals, setAnimals] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    breed: "",
-    age: "",
-    price: "",
-    description: "",
-  });
-  const [imageFile, setImageFile] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { cart, setCart } = useContext(CartContext);
+  const [showModal, setShowModal] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState({ method: "", number: "", name: "" });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [buyerName, setBuyerName] = useState("");
+  const { authFetch } = useAuth();
+  const navigate = useNavigate();
 
-  // Fetch user animals
   useEffect(() => {
-    if (token) {
-      api
-        .get("/animals", {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        })
-        .then((res) => {
-          const userAnimals = res.data.filter((a) => a.farmer_id === user?.id);
-          setAnimals(userAnimals);
-        })
-        .catch(() => setError("Failed to fetch your animals."));
-    }
-  }, [token, user?.id]);
+    const fetchAnimals = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/animals");
+        setAnimals(response.data);
+      } catch (error) {
+        console.error("Error fetching animals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Handle form input
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === "image") {
-      setImageFile(files[0]);
-    } else {
-      setFormData({ ...formData, [name]: value });
+    fetchAnimals();
+  }, []);
+
+  const addToCart = (animal) => {
+    if (!cart.find((item) => item.id === animal.id)) {
+      setCart([...cart, animal]);
     }
   };
 
-  // Submit animal data with image in single request
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  const removeFromCart = (id) => {
+    setCart(cart.filter((item) => item.id !== id));
+  };
 
-    // Validate required fields
-    if (!formData.name || !formData.breed || !formData.age || !formData.price || !imageFile) {
-      setError("Please fill in all required fields and select an image.");
-      return;
-    }
+  const handlePayment = async (e) => {
+    e.preventDefault();
 
     try {
-      // Create FormData with all fields including image
-      const submitData = new FormData();
-      submitData.append("name", formData.name);
-      submitData.append("breed", formData.breed);
-      submitData.append("age", formData.age);
-      submitData.append("price", formData.price);
-      submitData.append("description", formData.description);
-      submitData.append("image", imageFile);
-
-      // Single request to create animal
-      const res = await api.post("/animals/", submitData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-        withCredentials: true,
+      const res = await authFetch("http://localhost:5000/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          method: paymentInfo.method,
+          number: paymentInfo.number,
+        }),
       });
 
-      setAnimals([...animals, res.data]);
-      setSuccess("Animal uploaded successfully!");
-      
-      // Reset form
-      setFormData({
-        name: "",
-        breed: "",
-        age: "",
-        price: "",
-        description: "",
-      });
-      setImageFile(null);
-      
-      // Reset file input
-      const fileInput = document.querySelector('input[type="file"]');
-      if (fileInput) fileInput.value = '';
-
-    } catch (err) {
-      console.error(err);
-      setError(
-        err.response?.data?.error || "Upload failed. Check form and try again."
-      );
+      await res.json();
+      setBuyerName(paymentInfo.name);
+      setCart([]);
+      setShowModal(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.error || "Payment failed. Please try again.";
+      alert("Error: " + errorMessage);
+      console.error("Payment error:", error.response?.data || error);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="text-center mt-5">
+        <Spinner animation="border" />
+      </div>
+    );
+  }
+
   return (
-    <Container className="mt-5">
-      <h2>Welcome {user?.email || "Farmer"}</h2>
-      <h4 className="mt-3">Upload a New Animal</h4>
+    <Container fluid className="mt-4">
+      <Row>
+        <Col md={8}>
+          <h2>Available Animals</h2>
+          <Row>
+            {animals.map((animal) => (
+              <Col md={4} key={animal.id} className="mb-3">
+                <Card>
+                  <Card.Body>
+                    <Card.Title>{animal.name}</Card.Title>
+                    <Card.Text>Breed: {animal.breed}</Card.Text>
+                    <Card.Text>Price: KES {animal.price}</Card.Text>
+                    <Button
+                      variant="primary"
+                      onClick={() => addToCart(animal)}
+                      disabled={cart.find((item) => item.id === animal.id)}
+                    >
+                      {cart.find((item) => item.id === animal.id)
+                        ? "In Cart"
+                        : "Add to Cart"}
+                    </Button>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Col>
 
-      {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
+        <Col md={4}>
+          <h2>Cart</h2>
+          <ListGroup>
+            {cart.map((item) => (
+              <ListGroup.Item key={item.id} className="d-flex justify-content-between">
+                <div>
+                  {item.name} - KES {item.price}
+                </div>
+                <Button variant="danger" size="sm" onClick={() => removeFromCart(item.id)}>
+                  Remove
+                </Button>
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+          <div className="mt-3">
+            <strong>
+              Total: KES{" "}
+              {cart.reduce((acc, item) => acc + parseFloat(item.price), 0)}
+            </strong>
+          </div>
+          <Button
+            className="mt-3"
+            variant="success"
+            onClick={() => setShowModal(true)}
+            disabled={cart.length === 0}
+          >
+            Proceed to Payment
+          </Button>
+        </Col>
+      </Row>
 
-      <Form onSubmit={handleSubmit}>
-        <Form.Group className="mb-3">
-          <Form.Label>Name</Form.Label>
-          <Form.Control 
-            name="name" 
-            value={formData.name} 
-            onChange={handleChange} 
-            required 
-            placeholder="Enter animal name"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Breed</Form.Label>
-          <Form.Control 
-            name="breed" 
-            value={formData.breed} 
-            onChange={handleChange} 
-            required 
-            placeholder="Enter breed"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Age</Form.Label>
-          <Form.Control 
-            type="number" 
-            name="age" 
-            value={formData.age} 
-            onChange={handleChange} 
-            required 
-            min="0"
-            placeholder="Enter age in years"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Price (KES)</Form.Label>
-          <Form.Control 
-            type="number" 
-            name="price" 
-            value={formData.price} 
-            onChange={handleChange} 
-            required 
-            min="0"
-            step="0.01"
-            placeholder="Enter price in KES"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Description (optional)</Form.Label>
-          <Form.Control 
-            as="textarea" 
-            rows={3} 
-            name="description" 
-            value={formData.description} 
-            onChange={handleChange}
-            placeholder="Enter description (optional)"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Image</Form.Label>
-          <Form.Control 
-            type="file" 
-            name="image" 
-            accept="image/*" 
-            onChange={handleChange} 
-            required 
-          />
-          {imageFile && (
-            <Form.Text className="text-muted">
-              Selected: {imageFile.name}
-            </Form.Text>
-          )}
-        </Form.Group>
-
-        <Button variant="primary" type="submit">
-          Upload Animal
-        </Button>
-      </Form>
-
-      <hr />
-      <h4 className="mt-4">Your Uploaded Animals</h4>
-      {animals.length === 0 ? (
-        <p className="text-muted">No animals uploaded yet.</p>
-      ) : (
-        <div className="d-flex flex-wrap gap-3">
-          {animals.map((animal) => (
-            <Card key={animal.id} style={{ width: "18rem" }}>
-              <Card.Img
-                variant="top"
-                src={
-                  animal.picture_url?.startsWith("/")
-                    ? `http://localhost:5000${animal.picture_url}`
-                    : animal.picture_url
+      {/* Payment Modal */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Payment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handlePayment}>
+            <Form.Group className="mb-3">
+              <Form.Label>Full Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter your name"
+                value={paymentInfo.name}
+                onChange={(e) =>
+                  setPaymentInfo({ ...paymentInfo, name: e.target.value })
                 }
-                onError={(e) => {
-                  e.target.src = "http://localhost:5000/fallback.jpg";
-                }}
-                style={{ height: "200px", objectFit: "cover" }}
+                required
               />
-              <Card.Body>
-                <Card.Title>{animal.name}</Card.Title>
-                <Card.Text>
-                  <strong>Breed:</strong> {animal.breed}<br />
-                  <strong>Age:</strong> {animal.age} years<br />
-                  <strong>Price:</strong> KES {animal.price}
-                  {animal.description && (
-                    <>
-                      <br />
-                      <strong>Description:</strong> {animal.description}
-                    </>
-                  )}
-                </Card.Text>
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      )}
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Payment Method</Form.Label>
+              <Form.Select
+                value={paymentInfo.method}
+                onChange={(e) =>
+                  setPaymentInfo({ ...paymentInfo, method: e.target.value })
+                }
+                required
+              >
+                <option value="">Select Method</option>
+                <option value="mpesa">M-PESA</option>
+                <option value="airtel">Airtel Money</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Phone Number</Form.Label>
+              <Form.Control
+                type="tel"
+                placeholder="Enter mobile number"
+                value={paymentInfo.number}
+                onChange={(e) =>
+                  setPaymentInfo({ ...paymentInfo, number: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Button variant="success" type="submit">
+              Pay Now
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Payment Success Modal */}
+      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>✅ Payment Successful</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <h5>Thank you, {buyerName}! Welcome again.</h5>
+          <p>Your order has been placed successfully.</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="success"
+            onClick={() => {
+              setShowSuccessModal(false);
+              navigate("/");
+            }}
+          >
+            Continue Shopping
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };
 
-export default FarmerPage;
+export default BuyerPage;

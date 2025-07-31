@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 
 const AnimalList = () => {
   const [animals, setAnimals] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch("http://localhost:5000/api/animals/")
       .then((res) => res.json())
-      .then((data) => setAnimals(data)) // ✅ direct array, no .animals
+      .then((data) => setAnimals(data))
       .catch((err) => console.error("Failed to fetch animals:", err));
   }, []);
+
+  const handleViewAnimal = (id) => {
+    navigate(`/animals/${id}`);
+  };
 
   return (
     <Container className="mt-5">
@@ -28,7 +34,9 @@ const AnimalList = () => {
                 <Card.Title>{animal.name}</Card.Title>
                 <Card.Text>Breed: {animal.breed}</Card.Text>
                 <Card.Text>Price: KES {animal.price}</Card.Text>
-                <Button variant="success">Buy Now</Button>
+                <Button variant="info" onClick={() => handleViewAnimal(animal.id)}>
+                  View Animal
+                </Button>
               </Card.Body>
             </Card>
           </Col>
